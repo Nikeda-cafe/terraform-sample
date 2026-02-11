@@ -80,3 +80,22 @@ variable "desired_count" {
   type        = number
   default     = 1
 }
+
+# ALB
+variable "enable_load_balancer" {
+  description = "Whether to enable Application Load Balancer for ECS service"
+  type        = bool
+  default     = false
+}
+
+variable "alb_subnet_tag_names" {
+  description = "Name tags of the existing public subnets for ALB"
+  type        = list(string)
+  default     = []
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN of the ACM certificate for HTTPS listener"
+  type        = string
+  default     = ""
+}

@@ -27,3 +27,18 @@ output "task_execution_role_arn" {
   description = "ECS task execution role ARN"
   value       = data.aws_iam_role.task_execution.arn
 }
+
+output "alb_dns_name" {
+  description = "ALB DNS name for HTTPS access"
+  value       = var.enable_load_balancer ? aws_lb.this[0].dns_name : null
+}
+
+output "alb_zone_id" {
+  description = "ALB Route 53 zone ID for Alias records"
+  value       = var.enable_load_balancer ? aws_lb.this[0].zone_id : null
+}
+
+output "alb_arn" {
+  description = "ALB ARN"
+  value       = var.enable_load_balancer ? aws_lb.this[0].arn : null
+}

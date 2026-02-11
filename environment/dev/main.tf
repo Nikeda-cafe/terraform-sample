@@ -18,7 +18,10 @@ module "ecs" {
   cpu                      = 256
   memory                   = 512
   image_tag                = "latest"
-  subnet_tag_name          = "udemy-aws-container-subnet-public1-ap-northeast-1a"
+  subnet_tag_names = [
+    "udemy-aws-container-subnet-public1-ap-northeast-1a",
+    "udemy-aws-container-subnet-public2-ap-northeast-1c",
+  ]
   security_group_name      = "udemy-aws-container-task-sg"
   desired_count            = 1
 }

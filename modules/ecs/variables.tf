@@ -65,9 +65,9 @@ variable "image_tag" {
 }
 
 # ECS サービス
-variable "subnet_tag_name" {
-  description = "Name tag of the existing subnets for ECS tasks"
-  type        = string
+variable "subnet_tag_names" {
+  description = "Name tags of the existing subnets for ECS tasks"
+  type        = list(string)
 }
 
 variable "security_group_name" {

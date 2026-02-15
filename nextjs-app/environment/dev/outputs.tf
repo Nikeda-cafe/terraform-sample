@@ -22,3 +22,13 @@ output "alb_dns_name" {
   description = "ALB DNS name for HTTPS access"
   value       = module.ecs.alb_dns_name
 }
+
+output "s3_bucket_id" {
+  description = "S3 bucket ID"
+  value       = module.s3.bucket_id
+}
+
+output "s3_bucket_arn" {
+  description = "S3 bucket ARN"
+  value       = module.s3.bucket_arn
+}

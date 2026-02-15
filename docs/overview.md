@@ -1,87 +1,99 @@
 # Terraform プロジェクト概要
 
-このリポジトリは、環境（`dev` / `prod`）ごとに Terraform のルートモジュールを分け、共通部品を `modules/` 配下の再利用可能なモジュールとして管理する構成です。
+このリポジトリは、サービス別・環境別に Terraform のルートモジュールを分け、各サービスが独自の `modules/` を持つ構成です。
 
 ## ディレクトリ構成
 
-- **`environment/`**: 環境ごとのルートモジュール（ここで `terraform init/plan/apply` を実行）
-  - **`environment/dev/`**: 開発環境
-  - **`environment/prod/`**: 本番環境
-- **`modules/`**: 環境から呼び出す子モジュール
-  - **`modules/vpc/`**: VPC 作成
-  - **`modules/ec2/`**: EC2 作成
-  - **`modules/cloudfront/`**: CloudFront Distribution 作成
-
-## 基本的な実行方法（dev の例）
-
-`prod` でも同様に、ディレクトリを `environment/prod` に読み替えて実行します。
-
-### 1) ディレクトリ移動
-
-```bash
-cd /Users/ikedanaoto/projects/terraform/environment/dev
+```
+terraform/
+├── shared/                    # 共有インフラ（VPC Endpoints など）
+│   ├── modules/
+│   │   └── vpc-endpoints/
+│   └── environment/
+│       ├── dev/
+│       └── prod/
+├── nextjs-app/                # Next.js アプリケーション
+│   ├── modules/
+│   │   └── ecs/
+│   └── environment/
+│       ├── dev/
+│       └── prod/
+├── express-app/               # Express アプリケーション
+│   ├── modules/
+│   │   └── ecs/
+│   └── environment/
+│       ├── dev/
+│       └── prod/
+└── docs/
 ```
 
-### 2) 初期化（必須）
+- **shared/**: ECR / CloudWatch Logs 用の VPC Endpoints（全サービスで共有）
+- **nextjs-app/**, **express-app/**: 各アプリの ECS クラスター・サービス・ALB
+- 各サービスの `environment/{dev|prod}/` で `terraform init/plan/apply` を実行
+
+## デプロイ順序（重要）
+
+VPC Endpoints は ECS タスクが ECR からイメージを取得するために必要です。
+
+1. **shared** を先にデプロイ
+2. **nextjs-app** をデプロイ
+3. **express-app** をデプロイ
+
+## 基本的な実行方法
+
+### 1) shared（VPC Endpoints）
 
 ```bash
+cd shared/environment/dev
 terraform init
-```
-
-このプロジェクトは `backend.tf` で S3 backend を使っています（例: `dev/terraform.tfstate`）。
-
-### 3) 変更内容の確認（plan）
-
-```bash
 terraform plan
-```
-
-実リソースは作られず、「作成/変更/削除される予定」が表示されます。
-
-### 4) 反映（apply）
-
-```bash
 terraform apply
 ```
 
-### 5) 削除（destroy）
+### 2) nextjs-app
 
 ```bash
-terraform destroy
+cd nextjs-app/environment/dev
+terraform init
+terraform plan
+terraform apply
 ```
 
-## 環境側（ルートモジュール）の考え方
+### 3) express-app
 
-`environment/dev/main.tf`（および `prod/main.tf`）で、必要なモジュールを `module` ブロックとして呼び出します。
+```bash
+cd express-app/environment/dev
+terraform init
+terraform plan
+terraform apply
+```
 
-- `dev` では `vpc` / `ec2` / `cloudfront` を呼び出す構成になっています
-- `cloudfront` は `origin_domain_name`（オリジンの DNS 名）を引数として受け取ります
+`prod` 環境の場合は、ディレクトリを `environment/prod` に読み替えて実行します。
 
-## CloudFront モジュールの概要（`modules/cloudfront`）
+## バックエンド（状態ファイル）
 
-`modules/cloudfront/main.tf` は `aws_cloudfront_distribution` を作成します。現状のデフォルトは「静的寄りの配信」を意識した設定です。
+S3 backend を使用しています。state キーはサービス・環境ごとに異なります。
 
-- **HTTPS 強制**: `viewer_protocol_policy = "redirect-to-https"`
-- **オリジン接続は HTTPS のみ**: `origin_protocol_policy = "https-only"`
-- **クエリ文字列と Cookie を転送しない**: `query_string = false` / `cookies.forward = "none"`
-  - キャッシュが効きやすくなりやすい一方、クエリ/Cookie で内容が変わるアプリ/API には不向きです
-- **証明書**: `cloudfront_default_certificate = true`（`*.cloudfront.net` 用）
-  - 独自ドメインを使う場合は、ACM 証明書・`aliases` 等の追加設定が必要です
+- `shared/dev/terraform.tfstate` / `shared/prod/terraform.tfstate`
+- `nextjs-app/dev/terraform.tfstate` / `nextjs-app/prod/terraform.tfstate`
+- `express-app/dev/terraform.tfstate` / `express-app/prod/terraform.tfstate`
 
-### 主な変数（`modules/cloudfront/variables.tf`）
+## 既存状態の移行（environment/dev から移行する場合）
 
-- **`origin_domain_name`（必須）**: 配信元（ALB 等）の DNS 名
-- **`default_root_object`（任意）**: 既定 `index.html`
-- `env`, `prefix`: タグ/命名用
+旧 `environment/dev` でデプロイ済みの場合、状態を分割して移行する必要があります。
 
-### 主な出力（`modules/cloudfront/outputs.tf`）
+1. **shared の状態を移行**（旧 state から vpc_endpoints を分離）
+   - 旧設定で `terraform state pull` し、`module.vpc_endpoints` 配下のリソースを新 `shared` 用 state に移す
+   - または、shared を新規適用してから旧 state から `module.vpc_endpoints` を削除する
 
-- `distribution_id`, `distribution_arn`
-- `domain_name`（例: `dxxxx.cloudfront.net`）
-- `hosted_zone_id`（Route 53 の Alias で利用）
+2. **nextjs-app の状態を移行**
+   - 旧 state の `module.ecs` 配下を `nextjs-app` 用 state に移す
+
+3. **旧 environment の .terraform キャッシュ**
+   - `environment/dev/.terraform/`、`environment/prod/.terraform/` は削除して問題ありません（init で再生成されます）
 
 ## よくある注意点
 
 - `plan` で差分確認してから `apply` するのが安全です
-- `origin_domain_name` の `example.com` は仮値なので、実際のオリジンに置き換えてください
-
+- express-app の ECR リポジトリ名（`dev-express-app` / `prod-express-app`）は既存環境に合わせて `main.tf` で調整してください
+- `ecs` モジュールは nextjs-app と express-app で同じ内容を持ちます。変更時は両方への反映が必要です

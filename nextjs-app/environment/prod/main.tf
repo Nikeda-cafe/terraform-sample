@@ -1,11 +1,11 @@
 data "aws_ecr_repository" "nextjs_app" {
-  name = "dev-nextjs-app"
+  name = "prod-nextjs-app"
 }
 
 module "ecs" {
   source                   = "../../modules/ecs"
-  env                      = "dev"
-  prefix                   = "dev-"
+  env                      = "prod"
+  prefix                   = "prod-"
   app_name                 = "nextjs-app"
   vpc_name                 = "udemy-aws-container-vpc"
   task_execution_role_name = "ecsTaskExecutionRole"
@@ -27,16 +27,4 @@ module "ecs" {
     "udemy-aws-container-subnet-public2-ap-northeast-1c",
   ]
   acm_certificate_arn = "arn:aws:acm:ap-northeast-1:270094330805:certificate/0713f5b6-e742-4308-a563-30db7cdd5238"
-}
-
-module "vpc_endpoints" {
-  source   = "../../modules/vpc-endpoints"
-  env      = "dev"
-  prefix   = "dev-"
-  vpc_name = "udemy-aws-container-vpc"
-  subnet_tag_names = [
-    "udemy-aws-container-subnet-private1-ap-northeast-1a",
-    "udemy-aws-container-subnet-private2-ap-northeast-1c",
-  ]
-  region = "ap-northeast-1"
 }

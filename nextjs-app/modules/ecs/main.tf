@@ -269,6 +269,21 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+# Route53 A レコード（ALB への Alias）
+resource "aws_route53_record" "alb" {
+  count = var.enable_load_balancer && var.route53_zone_id != "" && var.route53_record_name != "" ? 1 : 0
+
+  zone_id = var.route53_zone_id
+  name    = var.route53_record_name
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.this[0].dns_name
+    zone_id                = aws_lb.this[0].zone_id
+    evaluate_target_health = true
+  }
+}
+
 # ECS サービス
 resource "aws_ecs_service" "this" {
   name            = "${local.prefix}${var.app_name}-service"

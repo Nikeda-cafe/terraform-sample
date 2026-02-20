@@ -99,3 +99,16 @@ variable "acm_certificate_arn" {
   type        = string
   default     = ""
 }
+
+# Route53
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for creating ALB alias record. Set with route53_record_name to enable."
+  type        = string
+  default     = ""
+}
+
+variable "route53_record_name" {
+  description = "Subdomain for the ALB (e.g., nextjs for nextjs.example.com, nextjs-dev for dev env)"
+  type        = string
+  default     = ""
+}

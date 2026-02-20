@@ -27,4 +27,8 @@ module "ecs" {
     "udemy-aws-container-subnet-public2-ap-northeast-1c",
   ]
   acm_certificate_arn = "arn:aws:acm:ap-northeast-1:270094330805:certificate/0713f5b6-e742-4308-a563-30db7cdd5238"
+
+  # Route53（ホストゾーンとサブドメインを設定すると ALB への Alias レコードが自動作成される）
+  route53_zone_id     = "" # 例: Z0123456789ABCDEFGHIJ
+  route53_record_name = "" # 例: nextjs（nextjs.example.com の場合）
 }

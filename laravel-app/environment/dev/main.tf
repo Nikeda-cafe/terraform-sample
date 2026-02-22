@@ -11,6 +11,23 @@ data "aws_ssm_parameter" "laravel_app_key" {
   name = "/laravel-app/dev/APP_KEY"
 }
 
+module "valkey" {
+  source = "../../modules/valkey"
+
+  prefix                    = "dev-"
+  env                       = "dev"
+  vpc_name                  = "udemy-aws-container-vpc"
+  subnet_tag_names          = [
+    "udemy-aws-container-subnet-private1-ap-northeast-1a",
+    "udemy-aws-container-subnet-private2-ap-northeast-1c",
+  ]
+  ecs_security_group_name   = "udemy-aws-container-task-sg"
+  node_type                 = "cache.t4g.micro"
+  num_cache_clusters        = 1
+  multi_az_enabled           = false
+  automatic_failover_enabled = false
+}
+
 module "ecs" {
   source                    = "../../modules/ecs"
   env                       = "dev"
@@ -46,12 +63,15 @@ module "ecs" {
     APP_ENV        = "production"
     APP_NAME       = "Laravel"
     APP_DEBUG      = "false"
-    SESSION_DRIVER = "database"
+    CACHE_DRIVER   = "redis"
+    SESSION_DRIVER = "redis"
     DB_HOST        = "10.0.0.76"
     DB_PORT        = "3306"
     DB_DATABASE    = "app"
     DB_USERNAME    = "app"
     DB_PASSWORD    = "secret"
+    REDIS_HOST     = module.valkey.primary_endpoint_address
+    REDIS_PORT     = tostring(module.valkey.port)
   }
   laravel_app_key_arn = data.aws_ssm_parameter.laravel_app_key.arn
 }

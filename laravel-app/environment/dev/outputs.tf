@@ -22,3 +22,8 @@ output "alb_dns_name" {
   description = "ALB DNS name for HTTPS access"
   value       = module.ecs.alb_dns_name
 }
+
+output "valkey_primary_endpoint" {
+  description = "Valkey cache primary endpoint (REDIS_HOST for Laravel)"
+  value       = module.valkey.primary_endpoint_address
+}

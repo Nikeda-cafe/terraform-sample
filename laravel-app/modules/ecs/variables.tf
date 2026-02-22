@@ -130,3 +130,9 @@ variable "route53_record_name" {
   type        = string
   default     = ""
 }
+
+variable "laravel_app_key_arn" {
+    description = "ARN of the Parameter Store parameter for Laravel APP_KEY"
+    type        = string
+    default     = null
+  }

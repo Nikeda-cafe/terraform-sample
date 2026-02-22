@@ -94,3 +94,18 @@ resource "aws_vpc_endpoint" "logs" {
     Environment = var.env
   }
 }
+
+# SSM Interface エンドポイント（Parameter Store 用）
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id              = data.aws_vpc.this.id
+  service_name        = "com.amazonaws.${local.region}.ssm"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = data.aws_subnets.this.ids
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name        = "${local.prefix}ssm"
+    Environment = var.env
+  }
+}

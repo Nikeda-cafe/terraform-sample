@@ -6,6 +6,11 @@ data "aws_ecr_repository" "laravel_nginx" {
   name = "laravel-nginx"
 }
 
+# Laravel アプリケーションキーを SSM パラメータストアから取得
+data "aws_ssm_parameter" "laravel_app_key" {
+  name = "/laravel-app/dev/APP_KEY"
+}
+
 module "ecs" {
   source                    = "../../modules/ecs"
   env                       = "dev"
@@ -41,7 +46,6 @@ module "ecs" {
     APP_ENV        = "production"
     APP_NAME       = "Laravel"
     APP_DEBUG      = "false"
-    APP_KEY        = "base64:rRQ9Q/6hcZ0pF6NF0QUyIb3gvCb5LwrOBLdnoFQPvn8="
     SESSION_DRIVER = "database"
     DB_HOST        = "10.0.0.76"
     DB_PORT        = "3306"
@@ -49,4 +53,5 @@ module "ecs" {
     DB_USERNAME    = "app"
     DB_PASSWORD    = "secret"
   }
+  laravel_app_key_arn = data.aws_ssm_parameter.laravel_app_key.arn
 }

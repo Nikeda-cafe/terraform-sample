@@ -138,6 +138,12 @@ resource "aws_ecs_task_definition" "this" {
 
       essential = true
       environment = local.laravel_env_list
+      secrets = [
+        {
+          name      = "APP_KEY"
+          valueFrom = var.laravel_app_key_arn
+        }
+      ]
 
       logConfiguration = {
         logDriver = "awslogs"

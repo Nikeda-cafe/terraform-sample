@@ -109,7 +109,6 @@ resource "aws_ecs_task_definition" "this" {
         }
       ]
 
-      # ここを追加
       environment = [
         {
           name  = "NODE_ENV"
@@ -122,6 +121,14 @@ resource "aws_ecs_task_definition" "this" {
         {
           name  = "HOSTNAME"
           value = "0.0.0.0"
+        },
+        {
+          name  = "DATABASE_URL"
+          value = "mysql://appuser:apppassword@10.0.13.147:3306/appdb"
+        },
+        {
+          name  = "API_GATEWAY_URL"
+          value = "https://jki9aqsy20.execute-api.ap-northeast-1.amazonaws.com/default"
         }
       ]
 
@@ -142,6 +149,37 @@ resource "aws_ecs_task_definition" "this" {
     Name        = "${local.prefix}${var.app_name}"
     Environment = var.env
   }
+}
+
+# ECS インフラロール（Blue-Green デプロイ用）
+resource "aws_iam_role" "ecs_infrastructure" {
+  count = var.enable_load_balancer ? 1 : 0
+
+  name = "${local.prefix}${var.app_name}-ecs-infra-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${local.prefix}${var.app_name}-ecs-infra-role"
+    Environment = var.env
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_infrastructure" {
+  count = var.enable_load_balancer ? 1 : 0
+
+  role       = aws_iam_role.ecs_infrastructure[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECSInfrastructureRolePolicyForLoadBalancers"
 }
 
 # ALB セキュリティグループ
@@ -208,11 +246,11 @@ resource "aws_lb" "this" {
   }
 }
 
-# ターゲットグループ
-resource "aws_lb_target_group" "this" {
+# Blue ターゲットグループ（Blue-Green デプロイ用）
+resource "aws_lb_target_group" "blue" {
   count = var.enable_load_balancer ? 1 : 0
 
-  name        = "${local.prefix}${var.app_name}-tg"
+  name        = "${local.prefix}${var.app_name}-blue-tg"
   port        = var.container_port
   protocol    = "HTTP"
   vpc_id      = data.aws_vpc.this.id
@@ -230,12 +268,39 @@ resource "aws_lb_target_group" "this" {
   }
 
   tags = {
-    Name        = "${local.prefix}${var.app_name}-tg"
+    Name        = "${local.prefix}${var.app_name}-blue-tg"
     Environment = var.env
   }
 }
 
-# HTTPS リスナー
+# Green ターゲットグループ（Blue-Green デプロイ用）
+resource "aws_lb_target_group" "green" {
+  count = var.enable_load_balancer ? 1 : 0
+
+  name        = "${local.prefix}${var.app_name}-green-tg"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.this.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    unhealthy_threshold = 2
+  }
+
+  tags = {
+    Name        = "${local.prefix}${var.app_name}-green-tg"
+    Environment = var.env
+  }
+}
+
+# HTTPS リスナー（default_action は blue TG へ転送）
 resource "aws_lb_listener" "https" {
   count = var.enable_load_balancer ? 1 : 0
 
@@ -247,7 +312,26 @@ resource "aws_lb_listener" "https" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.this[0].arn
+    target_group_arn = aws_lb_target_group.blue[0].arn
+  }
+}
+
+# 本番トラフィック用リスナールール（ECS がデプロイ時に blue/green を切り替える）
+resource "aws_lb_listener_rule" "production" {
+  count = var.enable_load_balancer ? 1 : 0
+
+  listener_arn = aws_lb_listener.https[0].arn
+  priority     = 1
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.blue[0].arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/*"]
+    }
   }
 }
 
@@ -269,7 +353,22 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# ECS サービス
+# Route53 A レコード（ALB への Alias）
+resource "aws_route53_record" "alb" {
+  count = var.enable_load_balancer && var.route53_zone_id != "" && var.route53_record_name != "" ? 1 : 0
+
+  zone_id = var.route53_zone_id
+  name    = var.route53_record_name
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.this[0].dns_name
+    zone_id                = aws_lb.this[0].zone_id
+    evaluate_target_health = true
+  }
+}
+
+# ECS サービス（Blue-Green デプロイ）
 resource "aws_ecs_service" "this" {
   name            = "${local.prefix}${var.app_name}-service"
   cluster         = aws_ecs_cluster.this.id
@@ -277,16 +376,26 @@ resource "aws_ecs_service" "this" {
   desired_count   = var.desired_count
   launch_type     = "FARGATE"
 
-  # ローリングアップデート設定
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
+
+  deployment_configuration {
+    strategy             = "BLUE_GREEN"
+    bake_time_in_minutes = var.bake_time_in_minutes
+  }
 
   dynamic "load_balancer" {
     for_each = var.enable_load_balancer ? [1] : []
     content {
-      target_group_arn = aws_lb_target_group.this[0].arn
+      target_group_arn = aws_lb_target_group.blue[0].arn
       container_name   = var.app_name
       container_port   = var.container_port
+
+      advanced_configuration {
+        alternate_target_group_arn = aws_lb_target_group.green[0].arn
+        production_listener_rule   = aws_lb_listener_rule.production[0].arn
+        role_arn                   = aws_iam_role.ecs_infrastructure[0].arn
+      }
     }
   }
 

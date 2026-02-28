@@ -42,3 +42,8 @@ output "alb_arn" {
   description = "ALB ARN"
   value       = var.enable_load_balancer ? aws_lb.this[0].arn : null
 }
+
+output "route53_record_fqdn" {
+  description = "FQDN of the Route53 alias record (when configured)"
+  value       = var.enable_load_balancer && var.route53_zone_id != "" && var.route53_record_name != "" ? aws_route53_record.alb[0].fqdn : null
+}

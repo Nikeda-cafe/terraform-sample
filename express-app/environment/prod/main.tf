@@ -1,4 +1,3 @@
-# ECR リポジトリ名は既存環境に合わせて調整してください
 data "aws_ecr_repository" "express_app" {
   name = "prod-express-app"
 }
@@ -11,10 +10,11 @@ module "ecs" {
   vpc_name                 = "udemy-aws-container-vpc"
   task_execution_role_name = "ecsTaskExecutionRole"
   ecr_repository_url       = data.aws_ecr_repository.express_app.repository_url
-  container_port           = 3001
+  container_port           = 3000
   cpu                      = 256
   memory                   = 512
   image_tag                = "latest"
+  bake_time_in_minutes     = 5
   subnet_tag_names = [
     "udemy-aws-container-subnet-private1-ap-northeast-1a",
     "udemy-aws-container-subnet-private2-ap-northeast-1c",
@@ -28,4 +28,7 @@ module "ecs" {
     "udemy-aws-container-subnet-public2-ap-northeast-1c",
   ]
   acm_certificate_arn = "arn:aws:acm:ap-northeast-1:270094330805:certificate/0713f5b6-e742-4308-a563-30db7cdd5238"
+
+  route53_zone_id     = ""
+  route53_record_name = ""
 }

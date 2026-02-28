@@ -43,7 +43,7 @@ variable "ecr_repository_url" {
 variable "container_port" {
   description = "Port on which the container listens"
   type        = number
-  default     = 3001
+  default     = 3000
 }
 
 variable "cpu" {
@@ -62,6 +62,13 @@ variable "image_tag" {
   description = "Docker image tag"
   type        = string
   default     = "latest"
+}
+
+# Blue-Green デプロイ
+variable "bake_time_in_minutes" {
+  description = "Number of minutes to wait after production traffic shift before terminating blue tasks"
+  type        = number
+  default     = 5
 }
 
 # ECS サービス
@@ -96,6 +103,19 @@ variable "alb_subnet_tag_names" {
 
 variable "acm_certificate_arn" {
   description = "ARN of the ACM certificate for HTTPS listener"
+  type        = string
+  default     = ""
+}
+
+# Route53
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for creating ALB alias record. Set with route53_record_name to enable."
+  type        = string
+  default     = ""
+}
+
+variable "route53_record_name" {
+  description = "Subdomain for the ALB (e.g., express for express.example.com, express-dev for dev env)"
   type        = string
   default     = ""
 }

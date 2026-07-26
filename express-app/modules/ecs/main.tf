@@ -1,6 +1,34 @@
 locals {
   prefix = var.prefix
   region = var.region
+
+  base_environment = [
+    {
+      name  = "NODE_ENV"
+      value = var.env == "prod" ? "production" : "development"
+    },
+    {
+      name  = "PORT"
+      value = tostring(var.container_port)
+    },
+    {
+      name  = "HOSTNAME"
+      value = "0.0.0.0"
+    },
+    {
+      name  = "API_GATEWAY_URL"
+      value = var.api_gateway_url
+    },
+  ]
+
+  database_environment = var.database_url != null && var.database_url != "" ? [
+    {
+      name  = "DATABASE_URL"
+      value = var.database_url
+    }
+  ] : []
+
+  container_environment = concat(local.base_environment, local.database_environment)
 }
 
 # 既存のVPCを参照
@@ -109,28 +137,7 @@ resource "aws_ecs_task_definition" "this" {
         }
       ]
 
-      environment = [
-        {
-          name  = "NODE_ENV"
-          value = var.env == "prod" ? "production" : "development"
-        },
-        {
-          name  = "PORT"
-          value = tostring(var.container_port)
-        },
-        {
-          name  = "HOSTNAME"
-          value = "0.0.0.0"
-        },
-        {
-          name  = "DATABASE_URL"
-          value = "mysql://appuser:apppassword@10.0.13.147:3306/appdb"
-        },
-        {
-          name  = "API_GATEWAY_URL"
-          value = "https://jki9aqsy20.execute-api.ap-northeast-1.amazonaws.com/default"
-        }
-      ]
+      environment = local.container_environment
 
       essential = true
 

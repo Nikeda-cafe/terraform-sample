@@ -11,7 +11,7 @@ locals {
   prefix      = var.prefix
   region      = var.region
   environment = var.environment
-  
+
   common_tags = merge(
     var.tags,
     {

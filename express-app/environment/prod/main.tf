@@ -31,4 +31,8 @@ module "ecs" {
 
   route53_zone_id     = ""
   route53_record_name = ""
+
+  api_gateway_url = "https://jki9aqsy20.execute-api.ap-northeast-1.amazonaws.com/default"
+  # shared/prod に RDS がない場合は null のまま（DATABASE_URL は付与しない）
+  database_url = null
 }

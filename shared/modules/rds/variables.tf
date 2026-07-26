@@ -66,9 +66,15 @@ variable "storage_type" {
 }
 
 variable "engine_version" {
-  description = "MySQL engine version"
+  description = "MariaDB engine version (major.minor or full version per RDS)"
   type        = string
-  default     = "8.0"
+  default     = "10.11"
+}
+
+variable "db_parameter_group_name" {
+  description = "DB parameter group (must match MariaDB major version family, e.g. default.mariadb10.11)"
+  type        = string
+  default     = "default.mariadb10.11"
 }
 
 variable "backup_retention_period" {
@@ -95,9 +101,10 @@ variable "publicly_accessible" {
   default     = false
 }
 
-variable "bastion_security_group_id" {
-  description = "Bastion security group ID for RDS ingress rule"
-  type        = string
+variable "allowed_client_security_group_ids" {
+  description = "Security group IDs allowed to reach MariaDB on port 3306 (e.g. ECS Fargate task security group)"
+  type        = list(string)
+  default     = []
 }
 
 variable "tags" {

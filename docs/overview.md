@@ -12,6 +12,9 @@ terraform/
 │   └── environment/
 │       ├── dev/
 │       └── prod/
+├── sandbox/                   # AWS リソース実験用の Terraform ルート
+│   └── environment/
+│       └── dev/
 ├── nextjs-app/                # Next.js アプリケーション
 │   ├── modules/
 │   │   └── ecs/
@@ -28,6 +31,7 @@ terraform/
 ```
 
 - **shared/**: ECR / CloudWatch Logs 用の VPC Endpoints（全サービスで共有）
+- **sandbox/**: 実験用 AWS リソースを安全に分離して試すための独立ルート
 - **nextjs-app/**, **express-app/**: 各アプリの ECS クラスター・サービス・ALB
 - 各サービスの `environment/{dev|prod}/` で `terraform init/plan/apply` を実行
 
@@ -38,6 +42,8 @@ VPC Endpoints は ECS タスクが ECR からイメージを取得するため�
 1. **shared** を先にデプロイ
 2. **nextjs-app** をデプロイ
 3. **express-app** をデプロイ
+
+`sandbox` は実験用の独立ルートなので、既存サービスのデプロイ順序には含めません。必要に応じて単体で `terraform plan/apply` してください。
 
 ## 基本的な実行方法
 
@@ -68,6 +74,17 @@ terraform plan
 terraform apply
 ```
 
+### 4) sandbox
+
+```bash
+cd sandbox/environment/dev
+terraform init
+terraform plan
+terraform apply
+```
+
+初期状態の `sandbox` はリソースを持たない最小構成です。実験したい AWS リソースを `sandbox/environment/dev/main.tf` に追加し、共通化したくなった段階で `sandbox/modules/` へ切り出します。
+
 `prod` 環境の場合は、ディレクトリを `environment/prod` に読み替えて実行します。
 
 ## バックエンド（状態ファイル）
@@ -75,6 +92,7 @@ terraform apply
 S3 backend を使用しています。state キーはサービス・環境ごとに異なります。
 
 - `shared/dev/terraform.tfstate` / `shared/prod/terraform.tfstate`
+- `sandbox/dev/terraform.tfstate`
 - `nextjs-app/dev/terraform.tfstate` / `nextjs-app/prod/terraform.tfstate`
 - `express-app/dev/terraform.tfstate` / `express-app/prod/terraform.tfstate`
 

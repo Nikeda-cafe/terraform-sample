@@ -22,3 +22,7 @@ override.tf.json
 # CLI configuration files
 .terraformrc
 terraform.rc
+
+# Lambda build dependencies and local artifacts
+sandbox/lambda/**/node_modules/
+sandbox/environment/**/*.zip

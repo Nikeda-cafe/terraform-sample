@@ -48,9 +48,9 @@ variable "storage_type" {
 }
 
 variable "engine_version" {
-  description = "MySQL engine version"
+  description = "MariaDB engine version for RDS"
   type        = string
-  default     = "8.0"
+  default     = "10.11"
 }
 
 variable "backup_retention_period" {
@@ -63,13 +63,6 @@ variable "skip_final_snapshot" {
   description = "Skip final snapshot on RDS deletion"
   type        = bool
   default     = true
-}
-
-# EC2 Bastion Configuration
-variable "bastion_instance_type" {
-  description = "Bastion EC2 instance type"
-  type        = string
-  default     = "t3.micro"
 }
 
 # Tags

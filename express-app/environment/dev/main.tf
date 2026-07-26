@@ -2,6 +2,26 @@ data "aws_ecr_repository" "express_app" {
   name = "express-app"
 }
 
+data "terraform_remote_state" "shared" {
+  backend = "s3"
+  config = {
+    bucket = "sample-terraform-state-bucket-na"
+    key    = "shared/dev/terraform.tfstate"
+    region = "ap-northeast-1"
+  }
+}
+
+locals {
+  database_url = format(
+    "mysql://%s:%s@%s:%s/%s",
+    data.terraform_remote_state.shared.outputs.rds_master_username,
+    urlencode(var.rds_master_password),
+    data.terraform_remote_state.shared.outputs.rds_address,
+    data.terraform_remote_state.shared.outputs.rds_port,
+    data.terraform_remote_state.shared.outputs.rds_database_name,
+  )
+}
+
 module "ecs" {
   source                   = "../../modules/ecs"
   env                      = "dev"
@@ -31,4 +51,7 @@ module "ecs" {
 
   route53_zone_id     = "Z0463825IEI8PL7L13YI"
   route53_record_name = "express"
+
+  api_gateway_url = "https://jki9aqsy20.execute-api.ap-northeast-1.amazonaws.com/default"
+  database_url    = local.database_url
 }

@@ -1,7 +1,7 @@
-# Security Group for RDS MySQL
+# Security Group for RDS MariaDB (MySQL protocol / port 3306)
 resource "aws_security_group" "rds" {
   name        = "${local.prefix}rds-sg"
-  description = "Security group for RDS MySQL database"
+  description = "Security group for RDS MariaDB database"
   vpc_id      = data.aws_vpc.this.id
 
   tags = merge(
@@ -12,15 +12,17 @@ resource "aws_security_group" "rds" {
   )
 }
 
-# Allow MySQL inbound from Bastion security group
-resource "aws_security_group_rule" "rds_inbound" {
+# Allow MariaDB from application tasks (e.g. ECS)
+resource "aws_security_group_rule" "rds_inbound_clients" {
+  for_each = toset(var.allowed_client_security_group_ids)
+
   type                     = "ingress"
   from_port                = 3306
   to_port                  = 3306
   protocol                 = "tcp"
   security_group_id        = aws_security_group.rds.id
-  source_security_group_id = var.bastion_security_group_id
-  description              = "Allow MySQL from Bastion"
+  source_security_group_id = each.value
+  description              = "Allow MariaDB (3306) from application security group"
 }
 
 # Allow all outbound traffic

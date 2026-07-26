@@ -119,3 +119,16 @@ variable "route53_record_name" {
   type        = string
   default     = ""
 }
+
+variable "api_gateway_url" {
+  description = "Optional API Gateway base URL passed to the container"
+  type        = string
+  default     = ""
+}
+
+variable "database_url" {
+  description = "Optional MySQL/MariaDB DATABASE_URL for the container (omit when not using RDS)"
+  type        = string
+  default     = null
+  sensitive   = true
+}

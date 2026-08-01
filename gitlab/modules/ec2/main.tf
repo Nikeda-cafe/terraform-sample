@@ -24,5 +24,5 @@ locals {
 }
 
 data "aws_ssm_parameter" "ubuntu_2204_ami" {
-  name = "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp3/ami-id"
+  name = "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id"
 }

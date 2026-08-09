@@ -1,0 +1,15 @@
+environment = "dev"
+prefix      = "dev-"
+region      = "ap-northeast-1"
+
+tags = {
+  Project     = "TerraformProject"
+  Environment = "sandbox"
+  ManagedBy   = "Terraform"
+}
+
+# Amazon Connect instance alias must be globally unique. Change the suffix if claimed already.
+connect_instance_alias             = "connect-poc-dev-yourname"
+connect_phone_number_country_code  = "US"
+connect_phone_number_type          = "DID"
+connect_recording_bucket_name      = "connect-poc-call-recordings"

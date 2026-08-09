@@ -1,0 +1,45 @@
+{
+  "Version": "2019-10-30",
+  "StartAction": "start-recording",
+  "Actions": [
+    {
+      "Identifier": "start-recording",
+      "Type": "UpdateContactRecordingBehavior",
+      "Parameters": {
+        "RecordingBehaviorOption": "On",
+        "RecordingParticipantOption": "Both"
+      },
+      "Transitions": {
+        "NextAction": "play-prompt",
+        "Errors": [
+          {
+            "NextAction": "play-prompt",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "play-prompt",
+      "Type": "MessageParticipant",
+      "Parameters": {
+        "Text": "This is a test outbound call from the Amazon Connect sandbox proof of concept. This call is being recorded."
+      },
+      "Transitions": {
+        "NextAction": "disconnect",
+        "Errors": [
+          {
+            "NextAction": "disconnect",
+            "ErrorType": "NoMatchingError"
+          }
+        ]
+      }
+    },
+    {
+      "Identifier": "disconnect",
+      "Type": "DisconnectParticipant",
+      "Parameters": {},
+      "Transitions": {}
+    }
+  ]
+}
